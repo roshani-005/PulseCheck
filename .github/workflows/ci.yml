@@ -1,0 +1,39 @@
+name: PulseCheck CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-refresh-reference-output:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Run tests
+        run: pytest -q
+      - name: Generate reproducible reference run
+        if: github.event_name == 'push'
+        run: python run_pipeline.py --n-loans 1500 --seed 42
+      - name: Commit refreshed data and outputs
+        if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/simulated_loan_panel.csv.gz outputs/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: refresh reproducible model outputs"
+            git push
+          fi
