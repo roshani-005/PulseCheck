@@ -142,7 +142,8 @@ def fit_cox_model(
     (output_dir / "ph_assumption_check.txt").write_text(check_text + "\n", encoding="utf-8")
 
     ph_test = proportional_hazard_test(cph, fit_df, time_transform="rank")
-    ph_table = ph_test.summary.reset_index().rename(columns={"index": "feature"})
+    ph_table = ph_test.summary.reset_index()
+    ph_table = ph_table.rename(columns={ph_table.columns[0]: "feature"})
     ph_table.to_csv(output_dir / "ph_test_statistics.csv", index=False)
     violations = ph_table.loc[ph_table["p"] < 0.05, "feature"].astype(str).tolist()
     diagnostic = {
